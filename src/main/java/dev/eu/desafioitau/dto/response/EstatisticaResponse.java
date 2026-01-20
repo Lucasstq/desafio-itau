@@ -7,9 +7,9 @@ import java.math.BigDecimal;
 @Builder
 public record EstatisticaResponse(
         Long count,
-        BigDecimal sum,
-        BigDecimal avg,
-        BigDecimal max,
-        BigDecimal min
+        double sum,
+        double avg,
+        double max,
+        double min
 ) {
 }
