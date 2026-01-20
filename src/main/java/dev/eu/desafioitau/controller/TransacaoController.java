@@ -1,7 +1,6 @@
 package dev.eu.desafioitau.controller;
 
 import dev.eu.desafioitau.dto.request.TransacaoRequest;
-import dev.eu.desafioitau.entities.Transacao;
 import dev.eu.desafioitau.exceptions.BadRequestException;
 import dev.eu.desafioitau.service.TransacaoService;
 import lombok.RequiredArgsConstructor;
@@ -28,9 +27,9 @@ public class TransacaoController {
         }
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity deletar(@PathVariable Long id) {
-        transacaoService.deletarTransacao(id);
+    @DeleteMapping()
+    public ResponseEntity deletar() {
+        transacaoService.deletarTransacao();
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 }

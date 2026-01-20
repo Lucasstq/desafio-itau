@@ -29,10 +29,8 @@ public class TransacaoRepository {
         return Optional.ofNullable(armazenar.get(id));
     }
 
-    public void deletar(Long id) {
-        buscarPorId(id)
-                .orElseThrow(() -> new RuntimeException("Transação não encontrada para exclusão."));
-        armazenar.remove(id);
+    public void deletar() {
+        armazenar.clear();
     }
 
 

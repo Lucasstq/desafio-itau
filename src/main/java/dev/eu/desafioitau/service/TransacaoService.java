@@ -28,8 +28,8 @@ public class TransacaoService {
     /*
     metodo para deletar transacoes
      */
-    public void deletarTransacao(Long id) {
-        transacaoRepository.deletar(id);
+    public void deletarTransacao() {
+        transacaoRepository.deletar();
     }
 
     /*
