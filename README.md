@@ -2,143 +2,194 @@
 
 Este repositório implementa uma API REST em Java + Spring Boot para recepção de transações e cálculo de estatísticas em uma janela deslizante (padrão: últimos 60 segundos), seguindo o enunciado do desafio do Itaú Unibanco.
 
-Resumo rápido
+## Resumo rápido
 
-- Linguagem: Java 17
-- Framework: Spring Boot
-- Modelo de armazenamento: em memória (HashMap)
-- Endpoints principais implementados: POST /transacao, DELETE /transacao/{id} (nota: ver observação), GET /estatistica
+| Item | Descrição |
+|------|-----------|
+| Linguagem | Java 17 |
+| Framework | Spring Boot 4.0.1 |
+| Documentação da API | Swagger/OpenAPI (springdoc-openapi) |
+| Modelo de armazenamento | Em memória (HashMap) |
+| Endpoints principais | `POST /transacao`, `DELETE /transacao`, `GET /estatistica` |
 
-Planejamento (o que vou cobrir neste README)
+## Índice
 
-- Resumo do desafio e requisitos técnicos
-- Mapeamento entre o enunciado do desafio e o que está implementado
-- Como construir e executar a aplicação
-- Exemplos de requisições (curl)
-- Observações, limitações e próximos passos
+- [Resumo do desafio e requisitos técnicos](#mapeamento-com-o-enunciado-do-desafio)
+- [Status de implementação](#status-de-implementação)
+- [Contratos (DTOs)](#contratos-dtos--entidades)
+- [Endpoints detalhados](#endpoints-detalhado-com-exemplos)
+- [Como construir e executar](#como-rodar)
+- [Documentação Swagger](#documentação-swagger)
+- [Exemplos de requisições (curl)](#exemplos-curl)
 
-Status de implementação (resumo)
+## Status de implementação
 
-- POST /transacao — Implementado (com validações)
-  - Responde 201 quando transação válida é aceita.
-  - Responde 422 para dados válidos semanticamente inválidos (por exemplo, valor negativo, data futura).
-  - Responde 400 para payloads que disparem BadRequestException.
-- DELETE /transacao — Diferente do enunciado: implementado como DELETE /transacao/{id} (exclui uma transação por id). Planejado: adicionar endpoint DELETE /transacao para limpar todas as transações.
-- GET /estatistica — Implementado: retorna estatísticas agregadas considerando apenas transações dos últimos 60 segundos.
-- Persistência: em memória (conforme restrição do desafio).
-- JSON: entrada e saída em JSON.
+| Endpoint | Status | Descrição |
+|----------|--------|-----------|
+| `POST /transacao` | ✅ Implementado | Cria uma nova transação com validações |
+| `DELETE /transacao` | ✅ Implementado | Apaga todas as transações |
+| `GET /estatistica` | ✅ Implementado | Retorna estatísticas dos últimos 60 segundos |
 
-Mapeamento com o enunciado do desafio
+### Detalhes da implementação
+
+- **POST /transacao**
+  - Responde `201 Created` quando transação válida é aceita.
+  - Responde `422 Unprocessable Entity` para dados semanticamente inválidos (ex.: valor negativo, data futura).
+  - Responde `400 Bad Request` para payloads que disparem `BadRequestException`.
+
+- **DELETE /transacao**
+  - Apaga todas as transações armazenadas em memória.
+  - Responde `200 OK` após a exclusão.
+
+- **GET /estatistica**
+  - Retorna estatísticas agregadas (count, sum, avg, min, max) considerando apenas transações dos últimos 60 segundos.
+  - Quando não houver transações no período, retorna todos os valores zerados.
+
+- **Persistência:** Em memória (HashMap) — conforme restrição do desafio.
+- **JSON:** Entrada e saída em JSON.
+
+## Mapeamento com o enunciado do desafio
 
 O enunciado pede explicitamente os seguintes endpoints e comportamentos:
 
-1) POST /transacao
-- Recebe JSON: { "valor": 123.45, "dataHora": "2020-08-07T12:34:56.789-03:00" }
+### 1) POST /transacao
+- Recebe JSON: `{ "valor": 123.45, "dataHora": "2020-08-07T12:34:56.789-03:00" }`
 - Aceita apenas transações com valor >= 0, dataHora no passado (não futuro) e campos obrigatórios preenchidos.
-- Respostas esperadas:
-  - 201 Created — transação aceita
-  - 422 Unprocessable Entity — transação não aceita (ex.: valor negativo / fora da janela)
-  - 400 Bad Request — JSON inválido / requisição não compreendida
+- **Respostas esperadas:**
+  - `201 Created` — transação aceita ✅
+  - `422 Unprocessable Entity` — transação não aceita (ex.: valor negativo / data futura) ✅
+  - `400 Bad Request` — JSON inválido / requisição não compreendida ✅
 
-2) DELETE /transacao
-- Deve apagar todas as transações em memória e retornar 200 OK
+### 2) DELETE /transacao
+- Apaga todas as transações em memória e retorna `200 OK` ✅
 
-3) GET /estatistica
-- Retorna estatísticas (count, sum, avg, min, max) somente com transações dos últimos 60 segundos
-- Quando não houver transações, todos os valores devem ser 0
+### 3) GET /estatistica
+- Retorna estatísticas (count, sum, avg, min, max) somente com transações dos últimos 60 segundos ✅
+- Quando não houver transações, todos os valores devem ser 0 ✅
 
-Observações sobre conformidade
+### Conformidade
 
-- A maioria das regras do POST e do GET está implementada conforme o desafio.
-- O repositório armazena dados em memória (HashMap) — isso atende à restrição de não usar bancos externos.
+✅ **Todas as regras do enunciado estão implementadas:**
+- Validações do POST (valor >= 0, data não futura, campos obrigatórios)
+- DELETE para limpar todas as transações
+- GET com estatísticas calculadas apenas sobre transações dos últimos 60 segundos
+- Armazenamento em memória (HashMap) — atende à restrição de não usar bancos externos
 
-Contratos (DTOs / Entidades)
+## Contratos (DTOs / Entidades)
 
-- TransacaoRequest
-  - valor: BigDecimal
-  - dataHora: OffsetDateTime (formato ISO-8601 com offset)
+### TransacaoRequest
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `valor` | `BigDecimal` | Valor da transação (deve ser >= 0) |
+| `dataHora` | `OffsetDateTime` | Data/hora da transação (formato ISO-8601 com offset) |
 
-- EstatisticaResponse
-  - count: Long
-  - sum: BigDecimal
-  - avg: BigDecimal
-  - min: BigDecimal
-  - max: BigDecimal
+### EstatisticaResponse
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `count` | `Long` | Quantidade de transações nos últimos 60 segundos |
+| `sum` | `double` | Soma dos valores das transações |
+| `avg` | `double` | Média dos valores das transações |
+| `min` | `double` | Menor valor de transação |
+| `max` | `double` | Maior valor de transação |
 
-Endpoints (detalhado com exemplos)
+## Endpoints (detalhado com exemplos)
 
-1) Criar transação
+### 1) Criar transação
 
-- POST /transacao
-- Request body (JSON):
+**Endpoint:** `POST /transacao`
 
-  {
-    "valor": 12.34,
-    "dataHora": "2025-01-19T12:34:56Z"
-  }
+**Request body (JSON):**
+```json
+{
+  "valor": 12.34,
+  "dataHora": "2025-01-19T12:34:56Z"
+}
+```
 
-- Possíveis respostas HTTP:
-  - 201 Created — transação registrada com sucesso (sem corpo)
-  - 422 Unprocessable Entity — validação falhou (sem corpo)
-  - 400 Bad Request — payload inválido (sem corpo)
+**Respostas HTTP:**
+| Código | Descrição |
+|--------|-----------|
+| `201 Created` | Transação registrada com sucesso (sem corpo) |
+| `422 Unprocessable Entity` | Validação falhou (sem corpo) |
+| `400 Bad Request` | Payload inválido (sem corpo) |
 
-Dica: use OffsetDateTime no formato ISO-8601 (ex.: 2025-01-19T12:34:56Z ou 2025-01-19T09:34:56-03:00).
+> 💡 **Dica:** Use `OffsetDateTime` no formato ISO-8601 (ex.: `2025-01-19T12:34:56Z` ou `2025-01-19T09:34:56-03:00`).
 
-2) Deletar transação (implementado atualmente)
+### 2) Deletar todas as transações
 
-- DELETE /transacao/{id}
-- Remove a transação com o id informado e retorna 200 OK.
-- Nota: o enunciado pede `DELETE /transacao` sem id para apagar todas as transações — isso é uma diferença conhecida e planejada para correção.
+**Endpoint:** `DELETE /transacao`
 
-3) Consultar estatísticas
+Apaga todas as transações armazenadas em memória.
 
-- GET /estatistica
-- Retorna 200 OK com JSON:
+**Respostas HTTP:**
+| Código | Descrição |
+|--------|-----------|
+| `200 OK` | Todas as transações foram deletadas com sucesso |
 
-  {
-    "count": 10,
-    "sum": 1234.56,
-    "avg": 123.456,
-    "min": 12.34,
-    "max": 123.56
-  }
+### 3) Consultar estatísticas
 
-- Quando não houver transações nos últimos 60 segundos, todos os valores retornados são zero.
+**Endpoint:** `GET /estatistica`
 
-Como rodar
+Retorna estatísticas agregadas das transações dos últimos 60 segundos.
 
-Pré-requisitos
+**Response (JSON):**
+```json
+{
+  "count": 10,
+  "sum": 1234.56,
+  "avg": 123.456,
+  "min": 12.34,
+  "max": 123.56
+}
+```
 
-- JDK 17
-- Maven (ou use o wrapper incluído `./mvnw`)
+> Quando não houver transações nos últimos 60 segundos, todos os valores retornados são `0`.
 
-Build
+## Como rodar
+
+### Pré-requisitos
+
+- JDK 17+
+- Maven 3.6+ (ou use o wrapper incluído `./mvnw`)
+
+### Build
 
 ```bash
 ./mvnw -DskipTests package
 ```
 
-Executar em modo desenvolvimento
+### Executar em modo desenvolvimento
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-Executar JAR gerado
+### Executar JAR gerado
 
 ```bash
 java -jar target/desafioitau-0.0.1-SNAPSHOT.jar
 ```
 
-Rodar testes
+### Rodar testes
 
 ```bash
 ./mvnw test
 ```
 
-Exemplos (curl)
+## Documentação Swagger
 
-Inserir uma transação válida:
+A API possui documentação interativa via **Swagger UI** e especificação **OpenAPI 3.0**.
+
+Após iniciar a aplicação, acesse:
+
+| Recurso | URL |
+|---------|-----|
+| Swagger UI | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) |
+| OpenAPI JSON | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs) |
+
+## Exemplos (curl)
+
+### Inserir uma transação válida:
 
 ```bash
 curl -X POST http://localhost:8080/transacao \
@@ -146,15 +197,55 @@ curl -X POST http://localhost:8080/transacao \
   -d '{"valor": 15.50, "dataHora": "2025-01-19T12:00:00Z"}'
 ```
 
-Consultar estatísticas:
+### Consultar estatísticas:
 
 ```bash
 curl http://localhost:8080/estatistica
 ```
 
-Deletar uma transação por id (implementado atualmente):
+### Deletar todas as transações:
 
 ```bash
-curl -X DELETE http://localhost:8080/transacao/1
+curl -X DELETE http://localhost:8080/transacao
 ```
+
+## Estrutura do Projeto
+
+```
+src/main/java/dev/eu/desafioitau/
+├── DesafioitauApplication.java     # Classe principal
+├── config/
+│   └── OpenAPIConfig.java          # Configuração Swagger/OpenAPI
+├── controller/
+│   ├── EstatisticaController.java  # Controller de estatísticas
+│   └── TransacaoController.java    # Controller de transações
+├── docs/
+│   ├── EstatisticaControllerDocs.java  # Documentação OpenAPI (interface)
+│   └── TransacaoControllerDocs.java    # Documentação OpenAPI (interface)
+├── dto/
+│   ├── request/
+│   │   └── TransacaoRequest.java   # DTO de entrada
+│   └── response/
+│       └── EstatisticaResponse.java # DTO de saída
+├── entities/
+│   └── Transacao.java              # Entidade de domínio
+├── exceptions/
+│   └── BadRequestException.java    # Exceção customizada
+├── repository/
+│   └── TransacaoRepository.java    # Repositório em memória
+└── service/
+    ├── EstatisticaService.java     # Serviço de cálculo de estatísticas
+    └── TransacaoService.java       # Serviço de transações
+```
+
+## Tecnologias Utilizadas
+
+- **Java 17** — Linguagem de programação
+- **Spring Boot 4.0.1** — Framework de aplicação
+- **Lombok** — Redução de boilerplate code
+- **SpringDoc OpenAPI** — Documentação automática da API (Swagger UI)
+
+## Licença
+
+Este projeto foi desenvolvido como parte de um desafio técnico.
 
