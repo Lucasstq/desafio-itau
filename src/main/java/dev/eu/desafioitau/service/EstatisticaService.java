@@ -24,23 +24,26 @@ public class EstatisticaService {
         OffsetDateTime agora = OffsetDateTime.now();
         OffsetDateTime inicio = agora.minusSeconds(60);
 
-        //incluir transações cujo timestamp esteja entre [inicio, limite]
-        final var transacaoNoUltimoMinuto = transacaoRepository.todasTransacoes()
-                .stream()
-                .filter(t -> !t.getDataHora().isBefore(inicio) &&
-                        !t.getDataHora().isAfter(agora))
-                .mapToDouble(t -> t.getValor().doubleValue())
-                .summaryStatistics();
+        if (inicio.getHour() > 0) {
+            //incluir transações cujo timestamp esteja entre [inicio, limite]
+            final var transacaoNoUltimoMinuto = transacaoRepository.todasTransacoes()
+                    .stream()
+                    .filter(t -> !t.getDataHora().isBefore(inicio) &&
+                            !t.getDataHora().isAfter(agora))
+                    .mapToDouble(t -> t.getValor().doubleValue())
+                    .summaryStatistics();
 
-        if(transacaoNoUltimoMinuto.getCount() > 0){
-            return EstatisticaResponse.builder()
-                    .count(transacaoNoUltimoMinuto.getCount())
-                    .sum(transacaoNoUltimoMinuto.getSum())
-                    .max(transacaoNoUltimoMinuto.getMax())
-                    .min(transacaoNoUltimoMinuto.getMin())
-                    .avg(transacaoNoUltimoMinuto.getAverage())
-                    .build();
+            if (transacaoNoUltimoMinuto.getCount() > 0) {
+                return EstatisticaResponse.builder()
+                        .count(transacaoNoUltimoMinuto.getCount())
+                        .sum(transacaoNoUltimoMinuto.getSum())
+                        .max(transacaoNoUltimoMinuto.getMax())
+                        .min(transacaoNoUltimoMinuto.getMin())
+                        .avg(transacaoNoUltimoMinuto.getAverage())
+                        .build();
+            }
         }
+
         return EstatisticaResponse.builder()
                 .count(0L)
                 .sum(0.0)
